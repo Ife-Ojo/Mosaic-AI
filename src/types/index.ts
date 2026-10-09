@@ -127,6 +127,8 @@ export interface NotionWorkspaceInfo {
   botName?: string;
 }
 
+export * from './exchange';
+
 export type StudyAction =
   | "translate"
   | "summarize"

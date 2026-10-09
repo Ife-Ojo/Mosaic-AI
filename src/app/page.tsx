@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { 
   Headphones, Sparkles, FileCheck2, Library, Database, 
   ArrowRight, CheckCircle2, Clock, BookOpen, Globe, 
-  Flame, Award, Layers, ExternalLink, RefreshCw, ChevronRight
+  Flame, Award, Layers, ExternalLink, RefreshCw, ChevronRight,
+  BookMarked
 } from 'lucide-react';
 import { MosaicBadge } from '@/components/MosaicBadge';
 import { NotionModal } from '@/components/NotionModal';
@@ -157,7 +158,7 @@ export default function DashboardPage() {
           <span className="text-xs text-slate-400">Enhance your courses with multilingual intelligence</span>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {/* Action 1: Lecture Companion */}
           <Link
             href="/lecture-companion"
@@ -229,6 +230,31 @@ export default function DashboardPage() {
             </div>
             <div className="mt-5 flex items-center gap-1.5 text-xs font-semibold text-emerald-400 group-hover:translate-x-1 transition-transform">
               <span>Simplify an assignment</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </div>
+          </Link>
+
+          {/* Action 4: Notes Exchange */}
+          <Link
+            href="/notes-exchange"
+            className="group relative p-5 rounded-2xl bg-slate-900/70 border border-slate-800 hover:border-amber-500/50 transition-all duration-200 hover:-translate-y-1 shadow-lg hover:shadow-amber-950/20 flex flex-col justify-between"
+          >
+            <div>
+              <div className="w-12 h-12 rounded-xl bg-amber-950/80 border border-amber-700/50 text-amber-300 flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <BookMarked className="w-6 h-6" />
+              </div>
+              <div className="flex items-center gap-2 mb-1.5">
+                <h3 className="font-bold text-white text-base group-hover:text-amber-300 transition-colors">
+                  Notes Exchange
+                </h3>
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-900/50 text-amber-300 font-medium">Exchange</span>
+              </div>
+              <p className="text-xs text-slate-300 leading-relaxed">
+                Discover, read, and save multilingual study notes shared by fellow students across different subjects and languages.
+              </p>
+            </div>
+            <div className="mt-5 flex items-center gap-1.5 text-xs font-semibold text-amber-400 group-hover:translate-x-1 transition-transform">
+              <span>Browse Notes Exchange</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </div>
           </Link>
