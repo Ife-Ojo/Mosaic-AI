@@ -55,25 +55,25 @@ export function LanguageSelector({
         type="button"
         disabled={disabled}
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-slate-900/80 hover:bg-slate-850 border border-slate-700/80 hover:border-purple-500/50 rounded-xl text-sm text-slate-200 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500/40"
+        className="w-full flex items-center justify-between px-3.5 py-2.5 bg-black border border-zinc-800 hover:border-orange-500/50 rounded-xl text-sm text-zinc-200 transition-all shadow-sm focus:outline-none focus:ring-2 focus:ring-orange-500/30"
       >
         <div className="flex items-center gap-2.5 truncate">
           <span className="text-lg leading-none">{selectedLang?.flag || '🌐'}</span>
           <span className="font-medium text-white truncate">{selectedLang?.name || 'Select Language'}</span>
-          <span className="text-xs text-slate-400 hidden sm:inline">({selectedLang?.nativeName})</span>
+          <span className="text-xs text-zinc-500 hidden sm:inline">({selectedLang?.nativeName})</span>
         </div>
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute z-50 left-0 right-0 mt-2 bg-slate-900/95 border border-purple-500/30 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
-          <div className="p-2 border-b border-slate-800">
+        <div className="absolute z-50 left-0 right-0 mt-2 bg-zinc-950 border border-zinc-800 rounded-xl shadow-2xl backdrop-blur-xl overflow-hidden py-1 animate-in fade-in zoom-in-95 duration-150">
+          <div className="p-2 border-b border-zinc-850">
             <input
               type="text"
               placeholder="Search language..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="w-full px-3 py-1.5 text-xs bg-slate-950/80 border border-slate-750 rounded-lg text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="w-full px-3 py-1.5 text-xs bg-black border border-zinc-800 rounded-lg text-zinc-200 placeholder-zinc-600 focus:outline-none focus:border-orange-500"
               autoFocus
             />
           </div>
@@ -91,15 +91,15 @@ export function LanguageSelector({
                     setSearch('');
                   }}
                   className={`w-full flex items-center justify-between px-3.5 py-2 text-xs transition-colors ${
-                    isSelected ? 'bg-purple-900/40 text-purple-200 font-semibold' : 'text-slate-300 hover:bg-slate-800/80'
+                    isSelected ? 'bg-orange-950/40 text-orange-200 font-semibold' : 'text-zinc-300 hover:bg-zinc-900'
                   }`}
                 >
                   <div className="flex items-center gap-2.5">
                     <span className="text-base">{lang.flag}</span>
                     <span className="text-white">{lang.name}</span>
-                    <span className="text-slate-400">({lang.nativeName})</span>
+                    <span className="text-zinc-500">({lang.nativeName})</span>
                   </div>
-                  {isSelected && <Check className="w-4 h-4 text-purple-400 shrink-0" />}
+                  {isSelected && <Check className="w-4 h-4 text-orange-400 shrink-0" />}
                 </button>
               );
             })}

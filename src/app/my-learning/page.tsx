@@ -3,11 +3,10 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { 
-  Library, Search, Filter, Database, ExternalLink, 
-  Trash2, Copy, Sparkles, BookOpen, Headphones, 
-  FileCheck2, Check, RefreshCw, Layers, ArrowUpRight, Plus
+  Library, Search, Database, 
+  Trash2, Copy, 
+  RefreshCw, Plus
 } from 'lucide-react';
-import { MosaicBadge } from '@/components/MosaicBadge';
 import { NotionModal } from '@/components/NotionModal';
 import { useToast } from '@/components/Toast';
 import { 
@@ -17,10 +16,10 @@ import {
   getStoredNotionWorkspace 
 } from '@/lib/storage';
 import { SUPPORTED_LANGUAGES } from '@/lib/sample-data';
-import { StudyMaterial, MaterialType, NotionWorkspaceInfo } from '@/types';
+import { StudyMaterial, NotionWorkspaceInfo } from '@/types';
 
 export default function MyLearningPage() {
-  const { success, info } = useToast();
+  const { success } = useToast();
 
   const [materials, setMaterials] = useState<StudyMaterial[]>([]);
   const [workspace, setWorkspace] = useState<NotionWorkspaceInfo | null>(null);
@@ -45,7 +44,7 @@ export default function MyLearningPage() {
   };
 
   const handleSyncItem = (mat: StudyMaterial) => {
-    const res = simulateNotionSync(mat.id);
+    simulateNotionSync(mat.id);
     const updated = getStoredMaterials();
     setMaterials(updated);
     setWorkspace(getStoredNotionWorkspace());
@@ -63,14 +62,12 @@ export default function MyLearningPage() {
       ...(mat.content.translatedTakeaways || mat.content.keyTakeaways || []).map(t => `- ${t}`),
     ];
     navigator.clipboard.writeText(lines.join('\n'));
-    success('Markdown Copied', 'Ready to paste into Notion or Obsidian.');
+    success('Markdown Copied', 'Ready to paste into Notion.');
   };
 
-  // Unique subjects and languages present in materials
   const availableSubjects = Array.from(new Set(materials.map(m => m.subject)));
   const availableLanguages = Array.from(new Set(materials.map(m => m.targetLanguage)));
 
-  // Filter materials
   const filteredMaterials = materials.filter((m) => {
     const matchesSearch = 
       m.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -95,18 +92,18 @@ export default function MyLearningPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="p-1 rounded-lg bg-purple-950 text-purple-400 border border-purple-800">
+            <span className="p-1 rounded-lg bg-orange-950/60 text-orange-400 border border-orange-800/60">
               <Library className="w-4 h-4" />
             </span>
-            <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
+            <span className="text-xs font-semibold text-orange-400 uppercase tracking-wider">
               Study Hub Archive
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            My Learning & Notion Vault
+            My Learning
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-            Access, review, and synchronize all generated lecture packs, study guides, and assignment plans with their corresponding Notion database pages.
+          <p className="text-xs sm:text-sm text-zinc-400 mt-1 max-w-2xl">
+            Access, review, and synchronize all generated lecture packs, study guides, and assignment plans with your Notion workspace.
           </p>
         </div>
 
@@ -114,7 +111,7 @@ export default function MyLearningPage() {
         <div className="flex items-center gap-3">
           <Link
             href="/study-studio"
-            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg shadow-purple-950/40 transition-all hover:scale-[1.02]"
+            className="px-4 py-2 bg-orange-600 hover:bg-orange-500 text-white rounded-xl text-xs font-semibold flex items-center gap-2 shadow-lg shadow-orange-950/40 transition-all hover:scale-[1.02]"
           >
             <Plus className="w-4 h-4" />
             <span>New Transform</span>
@@ -124,44 +121,48 @@ export default function MyLearningPage() {
 
       {/* Stats Counter Ribbon */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-400 mb-1">Total Materials</div>
+        <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-850 shadow-sm">
+          <div className="text-xs text-zinc-400 mb-1">Total Materials</div>
           <div className="text-2xl font-extrabold text-white">{materials.length}</div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-400 mb-1">Notion Synced</div>
+        <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-850 shadow-sm">
+          <div className="text-xs text-zinc-400 mb-1">Notion Synced</div>
           <div className="text-2xl font-extrabold text-emerald-400 flex items-center gap-2">
             <span>{syncedCount}</span>
-            <span className="text-xs font-normal text-slate-500">/ {materials.length}</span>
+            <span className="text-xs font-normal text-zinc-500">/ {materials.length}</span>
           </div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 shadow-sm">
-          <div className="text-xs text-slate-400 mb-1">Target Languages</div>
-          <div className="text-2xl font-extrabold text-purple-400">{availableLanguages.length}</div>
+        <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-850 shadow-sm">
+          <div className="text-xs text-zinc-400 mb-1">Target Languages</div>
+          <div className="text-2xl font-extrabold text-orange-400">{availableLanguages.length}</div>
         </div>
 
-        <div className="p-4 rounded-2xl bg-stone-900/80 border border-stone-800 shadow-sm">
-          <div className="text-xs text-stone-400 mb-1">Connected Vault</div>
-          <div className="text-xs font-bold text-stone-200 truncate mt-1">
-            {workspace?.workspaceName || 'Academic Vault'}
+        <div
+          onClick={() => setIsNotionModalOpen(true)}
+          className="p-4 rounded-2xl bg-zinc-950 border border-zinc-850 shadow-sm cursor-pointer hover:border-orange-500/40 transition-colors"
+        >
+          <div className="text-xs text-zinc-400 mb-1">Notion Status</div>
+          <div className="text-xs font-bold text-white truncate mt-1 flex items-center gap-1.5">
+            <span className={`w-2 h-2 rounded-full ${workspace?.connected ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+            <span>{workspace?.connected ? workspace.workspaceName : 'Connect Notion'}</span>
           </div>
         </div>
       </div>
 
       {/* Filter and Search Bar */}
-      <div className="p-4 rounded-2xl bg-slate-900/70 border border-slate-800 backdrop-blur-xl space-y-4">
+      <div className="p-4 rounded-2xl bg-zinc-950 border border-zinc-850 space-y-4">
         <div className="flex flex-col sm:flex-row gap-3">
           {/* Search Input */}
           <div className="relative flex-1">
-            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-3" />
+            <Search className="w-4 h-4 text-zinc-500 absolute left-3.5 top-3" />
             <input
               type="text"
               placeholder="Search by topic title, course, or keyword..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-white placeholder-slate-500 focus:outline-none focus:border-purple-500"
+              className="w-full pl-10 pr-4 py-2 bg-black border border-zinc-800 rounded-xl text-xs text-white placeholder-zinc-600 focus:outline-none focus:border-orange-500"
             />
           </div>
 
@@ -169,7 +170,7 @@ export default function MyLearningPage() {
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
-            className="px-3 py-2 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+            className="px-3 py-2 bg-black border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
           >
             <option value="all">All Material Types</option>
             <option value="lecture">Lecture Notes</option>
@@ -181,7 +182,7 @@ export default function MyLearningPage() {
           <select
             value={selectedSubject}
             onChange={(e) => setSelectedSubject(e.target.value)}
-            className="px-3 py-2 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+            className="px-3 py-2 bg-black border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
           >
             <option value="all">All Subjects</option>
             {availableSubjects.map((s) => (
@@ -195,7 +196,7 @@ export default function MyLearningPage() {
           <select
             value={selectedSyncStatus}
             onChange={(e) => setSelectedSyncStatus(e.target.value)}
-            className="px-3 py-2 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 focus:outline-none focus:border-purple-500"
+            className="px-3 py-2 bg-black border border-zinc-800 rounded-xl text-xs text-zinc-200 focus:outline-none focus:border-orange-500"
           >
             <option value="all">All Sync Statuses</option>
             <option value="synced">Synced to Notion</option>
@@ -215,27 +216,27 @@ export default function MyLearningPage() {
             return (
               <div
                 key={mat.id}
-                className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-purple-500/40 transition-all duration-200 shadow-xl flex flex-col justify-between group"
+                className="p-5 rounded-2xl bg-zinc-950 border border-zinc-850 hover:border-orange-500/40 transition-all duration-200 shadow-xl flex flex-col justify-between group"
               >
                 <div>
                   {/* Card Header Badges */}
                   <div className="flex items-center justify-between gap-2 mb-3">
-                    <MosaicBadge variant="purple" size="sm">
+                    <span className="text-xs px-2.5 py-0.5 rounded-md font-medium bg-zinc-900 text-orange-300 border border-zinc-800">
                       {mat.subject}
-                    </MosaicBadge>
-                    <MosaicBadge variant={isSynced ? 'emerald' : 'slate'} size="sm">
-                      <span className={`w-1.5 h-1.5 rounded-full ${isSynced ? 'bg-emerald-400' : 'bg-slate-400'}`} />
-                      {isSynced ? 'Notion Synced' : 'Local Draft'}
-                    </MosaicBadge>
+                    </span>
+                    <span className={`text-xs px-2 py-0.5 rounded-md flex items-center gap-1.5 border ${isSynced ? 'bg-zinc-900 text-emerald-400 border-zinc-800' : 'bg-zinc-900 text-zinc-400 border-zinc-800'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${isSynced ? 'bg-emerald-400' : 'bg-zinc-600'}`} />
+                      {isSynced ? 'Synced' : 'Local Draft'}
+                    </span>
                   </div>
 
                   {/* Title */}
-                  <h3 className="font-bold text-white text-base group-hover:text-purple-300 transition-colors line-clamp-2 mb-2">
+                  <h3 className="font-bold text-white text-base group-hover:text-orange-300 transition-colors line-clamp-2 mb-2">
                     {mat.title}
                   </h3>
 
                   {/* Language & Date Metadata */}
-                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-3">
+                  <div className="flex items-center gap-2 text-xs text-zinc-400 mb-3">
                     <span>
                       {sourceLangObj?.flag} {mat.sourceLanguage.toUpperCase()} → {targetLangObj?.flag} {mat.targetLanguage.toUpperCase()}
                     </span>
@@ -244,30 +245,30 @@ export default function MyLearningPage() {
                   </div>
 
                   {/* Summary Snippet */}
-                  <p className="text-xs text-slate-300 line-clamp-3 leading-relaxed mb-4">
+                  <p className="text-xs text-zinc-400 line-clamp-3 leading-relaxed mb-4">
                     {mat.content.translatedSummary || mat.content.summary || 'Multilingual study notes ready for revision and Notion export.'}
                   </p>
                 </div>
 
                 {/* Footer Actions */}
-                <div className="pt-4 border-t border-slate-850 flex items-center justify-between gap-2">
+                <div className="pt-4 border-t border-zinc-850 flex items-center justify-between gap-2">
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => {
                         setSelectedMaterialForNotion(mat);
                         setIsNotionModalOpen(true);
                       }}
-                      className="px-2.5 py-1.5 rounded-xl bg-stone-900 hover:bg-stone-850 border border-stone-800 text-stone-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                      className="px-2.5 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
                       title="Open in Notion preview modal"
                     >
-                      <Database className="w-3.5 h-3.5 text-purple-400" />
+                      <Database className="w-3.5 h-3.5 text-orange-400" />
                       <span>Notion</span>
                     </button>
 
                     {!isSynced && (
                       <button
                         onClick={() => handleSyncItem(mat)}
-                        className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors"
+                        className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 text-zinc-300 hover:text-white transition-colors"
                         title="Sync to Notion now"
                       >
                         <RefreshCw className="w-3.5 h-3.5" />
@@ -276,7 +277,7 @@ export default function MyLearningPage() {
 
                     <button
                       onClick={() => handleCopyMarkdown(mat)}
-                      className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-750 text-slate-300 hover:text-white transition-colors"
+                      className="p-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-zinc-850 text-zinc-300 hover:text-white transition-colors"
                       title="Copy Markdown block"
                     >
                       <Copy className="w-3.5 h-3.5" />
@@ -286,7 +287,7 @@ export default function MyLearningPage() {
                   <div className="flex items-center gap-1.5">
                     <button
                       onClick={() => handleDelete(mat.id, mat.title)}
-                      className="p-1.5 rounded-xl text-slate-500 hover:text-rose-400 hover:bg-rose-950/20 transition-colors"
+                      className="p-1.5 rounded-xl text-zinc-500 hover:text-rose-400 hover:bg-rose-950/20 transition-colors"
                       title="Delete material"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
@@ -300,7 +301,7 @@ export default function MyLearningPage() {
                           ? '/assignment-simplifier'
                           : '/study-studio'
                       }
-                      className="px-3 py-1.5 rounded-xl bg-purple-600/30 hover:bg-purple-600/50 border border-purple-500/40 text-purple-200 text-xs font-semibold transition-colors"
+                      className="px-3 py-1.5 rounded-xl bg-orange-600 hover:bg-orange-500 text-white text-xs font-semibold transition-colors shadow-sm"
                     >
                       Review
                     </Link>
@@ -312,10 +313,10 @@ export default function MyLearningPage() {
         </div>
       ) : (
         /* Empty Filter State */
-        <div className="p-12 rounded-2xl bg-slate-900/40 border border-dashed border-slate-800 text-center">
-          <Library className="w-10 h-10 text-slate-500 mx-auto mb-3" />
+        <div className="p-12 rounded-2xl bg-zinc-950 border border-dashed border-zinc-850 text-center">
+          <Library className="w-10 h-10 text-zinc-600 mx-auto mb-3" />
           <h3 className="text-base font-bold text-white mb-1">No study materials match your filters</h3>
-          <p className="text-xs text-slate-400 mb-4 max-w-sm mx-auto">
+          <p className="text-xs text-zinc-400 mb-4 max-w-sm mx-auto">
             Try adjusting your search query, or clear filters to see your full library.
           </p>
           <button
@@ -326,7 +327,7 @@ export default function MyLearningPage() {
               setSelectedLang('all');
               setSelectedSyncStatus('all');
             }}
-            className="px-4 py-2 bg-slate-800 hover:bg-slate-750 text-slate-200 text-xs font-semibold rounded-xl transition-colors"
+            className="px-4 py-2 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-200 text-xs font-semibold rounded-xl transition-colors"
           >
             Reset All Filters
           </button>
@@ -338,7 +339,7 @@ export default function MyLearningPage() {
         material={selectedMaterialForNotion}
         isOpen={isNotionModalOpen}
         onClose={() => setIsNotionModalOpen(false)}
-        onSynced={(updated) => {
+        onSynced={() => {
           setMaterials(getStoredMaterials());
           setWorkspace(getStoredNotionWorkspace());
         }}

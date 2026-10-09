@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -11,12 +11,24 @@ import {
   Library, 
   Database,
   Flame,
-  ArrowUpRight
+  ArrowUpRight,
+  ChevronLeft,
+  ChevronRight,
+  Link2
 } from 'lucide-react';
 import { MosaicTesseraIcon } from './MosaicPattern';
+import { useSidebar } from './SidebarContext';
+import { getStoredNotionWorkspace } from '@/lib/storage';
+import { NotionWorkspaceInfo } from '@/types';
 
-export function Sidebar() {
+export function Sidebar({ onOpenNotionModal }: { onOpenNotionModal?: () => void }) {
   const pathname = usePathname();
+  const { isCollapsed, toggleSidebar } = useSidebar();
+  const [workspace, setWorkspace] = useState<NotionWorkspaceInfo | null>(null);
+
+  useEffect(() => {
+    setWorkspace(getStoredNotionWorkspace());
+  }, [pathname]);
 
   const navItems = [
     {
@@ -52,32 +64,70 @@ export function Sidebar() {
   ];
 
   return (
-    <aside className="w-64 border-r border-slate-800/80 bg-slate-950/70 backdrop-blur-xl flex flex-col justify-between shrink-0 h-screen sticky top-0 z-40 hidden md:flex">
-      {/* Brand Header */}
+    <aside
+      className={`border-r border-zinc-800 bg-black/95 backdrop-blur-xl flex flex-col justify-between shrink-0 h-screen sticky top-0 z-40 hidden md:flex transition-all duration-300 ${
+        isCollapsed ? 'w-18' : 'w-64'
+      }`}
+    >
+      {/* Brand Header & Toggle */}
       <div>
-        <div className="p-5 border-b border-slate-800/80 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-600 to-pink-500 p-0.5 shadow-lg shadow-purple-950/50 group-hover:scale-105 transition-transform">
-              <div className="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
-                <MosaicTesseraIcon className="w-5 h-5" />
+        <div className={`p-4 border-b border-zinc-850 flex items-center ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          {!isCollapsed ? (
+            <Link href="/" className="flex items-center gap-3 group">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-purple-600 p-0.5 shadow-md shadow-orange-950/30 group-hover:scale-105 transition-transform">
+                <div className="w-full h-full bg-black rounded-[10px] flex items-center justify-center">
+                  <MosaicTesseraIcon className="w-4 h-4" />
+                </div>
               </div>
-            </div>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="font-extrabold text-base tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-purple-100 to-purple-300">
-                  Mosaic
-                </span>
-                <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-purple-900/60 text-purple-300 border border-purple-700/50">
-                  AI
-                </span>
+              <div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-extrabold text-base tracking-tight text-white">
+                    Mosaic
+                  </span>
+                  <span className="text-[10px] font-bold px-1.5 py-0.2 rounded bg-orange-950/80 text-orange-400 border border-orange-700/60">
+                    AI
+                  </span>
+                </div>
+                <p className="text-[11px] text-zinc-400 font-medium">Multilingual Notion Companion</p>
               </div>
-              <p className="text-[11px] text-slate-400 font-medium">Multilingual Notion Companion</p>
-            </div>
-          </Link>
+            </Link>
+          ) : (
+            <Link href="/" className="group" title="Mosaic AI">
+              <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-orange-500 via-amber-500 to-purple-600 p-0.5 shadow-md group-hover:scale-105 transition-transform">
+                <div className="w-full h-full bg-black rounded-[10px] flex items-center justify-center">
+                  <MosaicTesseraIcon className="w-4 h-4" />
+                </div>
+              </div>
+            </Link>
+          )}
+
+          {/* Collapse/Expand button */}
+          <button
+            onClick={toggleSidebar}
+            className={`p-1.5 rounded-lg text-zinc-400 hover:text-white hover:bg-zinc-800 transition-colors ${
+              isCollapsed ? 'hidden' : 'block'
+            }`}
+            title="Collapse sidebar (fullscreen view)"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
         </div>
 
+        {/* When collapsed, show a center uncollapse button */}
+        {isCollapsed && (
+          <div className="p-2 flex justify-center border-b border-zinc-850">
+            <button
+              onClick={toggleSidebar}
+              className="p-1.5 rounded-lg text-zinc-400 hover:text-orange-400 hover:bg-zinc-900 transition-colors"
+              title="Expand sidebar"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        )}
+
         {/* Navigation Links */}
-        <nav className="p-3 space-y-1">
+        <nav className="p-2 space-y-1">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -86,26 +136,29 @@ export function Sidebar() {
               <Link
                 key={item.name}
                 href={item.href}
-                className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-medium transition-all group ${
+                title={isCollapsed ? item.name : undefined}
+                className={`flex items-center ${
+                  isCollapsed ? 'justify-center p-3' : 'justify-between px-3.5 py-2.5'
+                } rounded-xl text-xs font-medium transition-all group ${
                   isActive
-                    ? 'bg-purple-600/20 text-purple-200 border border-purple-500/40 shadow-sm'
-                    : 'text-slate-400 hover:text-white hover:bg-slate-900/80 border border-transparent'
+                    ? 'bg-orange-500/15 text-orange-300 border border-orange-500/40 shadow-sm'
+                    : 'text-zinc-400 hover:text-white hover:bg-zinc-900 border border-transparent'
                 }`}
               >
                 <div className="flex items-center gap-3">
                   <Icon
                     className={`w-4 h-4 transition-colors ${
-                      isActive ? 'text-purple-400' : 'text-slate-500 group-hover:text-purple-400'
+                      isActive ? 'text-orange-400' : 'text-zinc-400 group-hover:text-orange-400'
                     }`}
                   />
-                  <span>{item.name}</span>
+                  {!isCollapsed && <span>{item.name}</span>}
                 </div>
-                {item.badge && (
+                {!isCollapsed && item.badge && (
                   <span
                     className={`text-[10px] px-2 py-0.5 rounded-md font-semibold ${
                       isActive
-                        ? 'bg-purple-500/30 text-purple-200'
-                        : 'bg-slate-800 text-slate-400 group-hover:text-slate-300'
+                        ? 'bg-orange-500/25 text-orange-300'
+                        : 'bg-zinc-850 text-zinc-400 group-hover:text-zinc-300'
                     }`}
                   >
                     {item.badge}
@@ -118,36 +171,59 @@ export function Sidebar() {
       </div>
 
       {/* Notion Workspace Banner in Sidebar */}
-      <div className="p-4 border-t border-slate-800/80 space-y-3">
-        <div className="p-3 rounded-xl bg-stone-900/80 border border-stone-800 text-xs">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-stone-400 font-medium flex items-center gap-1.5 text-[11px]">
-              <Database className="w-3.5 h-3.5 text-purple-400" />
-              Notion Synced
-            </span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          </div>
-          <div className="font-semibold text-stone-200 text-xs truncate">
-            Aiden's Academic Vault
-          </div>
-          <div className="text-[11px] text-stone-400 mt-1 flex items-center justify-between">
-            <span>18 materials linked</span>
-            <Link href="/my-learning" className="text-purple-400 hover:underline flex items-center gap-0.5">
-              <span>View</span>
-              <ArrowUpRight className="w-3 h-3" />
-            </Link>
+      {!isCollapsed ? (
+        <div className="p-4 border-t border-zinc-850 space-y-3">
+          <div className="p-3 rounded-xl bg-zinc-950 border border-zinc-800 text-xs">
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-zinc-400 font-medium flex items-center gap-1.5 text-[11px]">
+                <Database className="w-3.5 h-3.5 text-orange-400" />
+                Notion Status
+              </span>
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  workspace?.connected ? 'bg-emerald-400 animate-pulse' : 'bg-zinc-600'
+                }`}
+              />
+            </div>
+            {workspace?.connected ? (
+              <>
+                <div className="font-semibold text-white text-xs truncate">
+                  {workspace.workspaceName}
+                </div>
+                <div className="text-[11px] text-zinc-400 mt-1 flex items-center justify-between">
+                  <span>{workspace.syncedItemsCount || 0} pages synced</span>
+                  <Link href="/my-learning" className="text-orange-400 hover:underline flex items-center gap-0.5">
+                    <span>View</span>
+                    <ArrowUpRight className="w-3 h-3" />
+                  </Link>
+                </div>
+              </>
+            ) : (
+              <div className="space-y-1.5">
+                <div className="text-zinc-400 text-[11px]">Not connected yet</div>
+                <button
+                  type="button"
+                  onClick={onOpenNotionModal}
+                  className="w-full py-1.5 px-2 bg-orange-600 hover:bg-orange-500 text-white font-semibold rounded-lg text-[11px] flex items-center justify-center gap-1 transition-colors shadow-sm"
+                >
+                  <Link2 className="w-3 h-3" />
+                  <span>Connect Notion</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
-
-        {/* Student Study Streak */}
-        <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-purple-950/30 border border-purple-800/30 text-xs">
-          <div className="flex items-center gap-2 text-purple-300 font-medium">
-            <Flame className="w-4 h-4 text-amber-400 fill-amber-400" />
-            <span>5-Day Study Streak</span>
-          </div>
-          <span className="text-[11px] font-bold text-amber-300">Level 4</span>
+      ) : (
+        <div className="p-2 border-t border-zinc-850 flex justify-center">
+          <button
+            onClick={onOpenNotionModal}
+            className="p-2 rounded-xl text-zinc-400 hover:text-orange-400 hover:bg-zinc-900 transition-colors"
+            title={workspace?.connected ? `Connected: ${workspace.workspaceName}` : 'Connect Notion'}
+          >
+            <Database className="w-4 h-4" />
+          </button>
         </div>
-      </div>
+      )}
     </aside>
   );
 }

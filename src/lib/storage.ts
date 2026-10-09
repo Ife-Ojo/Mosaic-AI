@@ -4,11 +4,15 @@ import { StudyMaterial, NotionWorkspaceInfo, SupportedLanguageCode } from '@/typ
 import { SAMPLE_MATERIALS, INITIAL_NOTION_WORKSPACE } from './sample-data';
 
 const STORAGE_KEYS = {
-  MATERIALS: 'mosaic_study_materials_v1',
-  NOTION_WORKSPACE: 'mosaic_notion_workspace_v1',
-  TARGET_LANG: 'mosaic_preferred_target_lang_v1',
-  STUDY_STREAK: 'mosaic_study_streak_v1',
+  MATERIALS: 'mosaic_study_materials_v2',
+  NOTION_WORKSPACE: 'mosaic_notion_workspace_v2',
+  TARGET_LANG: 'mosaic_preferred_target_lang_v2',
+  STUDY_STREAK: 'mosaic_study_streak_v2',
+  DISPLAY_FORMAT: 'mosaic_display_format_v2',
+  SIDEBAR_COLLAPSED: 'mosaic_sidebar_collapsed_v2',
 };
+
+export type DisplayFormat = 'dual' | 'native_first' | 'feynman';
 
 export function getStoredMaterials(): StudyMaterial[] {
   if (typeof window === 'undefined') return SAMPLE_MATERIALS;
@@ -78,6 +82,34 @@ export function saveNotionWorkspace(info: NotionWorkspaceInfo): void {
   }
 }
 
+export function connectNotionWorkspace(workspaceName = 'Academic Notion Vault', targetDatabase = 'Courses & Learning 2026', apiKey?: string): NotionWorkspaceInfo {
+  const info: NotionWorkspaceInfo = {
+    connected: true,
+    workspaceName: workspaceName.trim() || 'My Academic Vault',
+    workspaceIcon: '🏛️',
+    targetDatabaseName: targetDatabase.trim() || 'Courses & Learning 2026',
+    lastSyncTimestamp: 'Just connected',
+    syncedItemsCount: 0,
+    apiKeyConfigured: Boolean(apiKey?.trim()),
+  };
+  saveNotionWorkspace(info);
+  return info;
+}
+
+export function disconnectNotionWorkspace(): NotionWorkspaceInfo {
+  const info: NotionWorkspaceInfo = {
+    connected: false,
+    workspaceName: '',
+    workspaceIcon: '📓',
+    targetDatabaseName: '',
+    lastSyncTimestamp: 'Disconnected',
+    syncedItemsCount: 0,
+    apiKeyConfigured: false,
+  };
+  saveNotionWorkspace(info);
+  return info;
+}
+
 export function getPreferredTargetLanguage(): SupportedLanguageCode {
   if (typeof window === 'undefined') return 'es';
   try {
@@ -95,12 +127,50 @@ export function savePreferredTargetLanguage(lang: SupportedLanguageCode): void {
   } catch {}
 }
 
+export function getDisplayFormat(): DisplayFormat {
+  if (typeof window === 'undefined') return 'dual';
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.DISPLAY_FORMAT);
+    return (stored as DisplayFormat) || 'dual';
+  } catch {
+    return 'dual';
+  }
+}
+
+export function saveDisplayFormat(format: DisplayFormat): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.DISPLAY_FORMAT, format);
+  } catch {}
+}
+
+export function getSidebarCollapsed(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    return localStorage.getItem(STORAGE_KEYS.SIDEBAR_COLLAPSED) === 'true';
+  } catch {
+    return false;
+  }
+}
+
+export function saveSidebarCollapsed(collapsed: boolean): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(STORAGE_KEYS.SIDEBAR_COLLAPSED, collapsed ? 'true' : 'false');
+  } catch {}
+}
+
 export function simulateNotionSync(materialId: string): { success: boolean; notionUrl: string; syncedAt: string } {
   const materials = getStoredMaterials();
   const mat = materials.find(m => m.id === materialId);
   const fakePageId = 'notion-' + Math.random().toString(36).substring(2, 9);
-  const fakeUrl = `https://notion.so/aidens-vault/${encodeURIComponent(mat?.title || 'Study-Material')}-${fakePageId}`;
+  const fakeUrl = `https://notion.so/workspace/${encodeURIComponent(mat?.title || 'Study-Material')}-${fakePageId}`;
   const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+  let workspace = getStoredNotionWorkspace();
+  if (!workspace.connected) {
+    workspace = connectNotionWorkspace('My Academic Vault', 'Course Materials');
+  }
 
   if (mat) {
     mat.notionSyncStatus = 'synced';
@@ -109,9 +179,8 @@ export function simulateNotionSync(materialId: string): { success: boolean; noti
     saveMaterials(materials);
   }
 
-  const workspace = getStoredNotionWorkspace();
   workspace.lastSyncTimestamp = `Today at ${now}`;
-  workspace.syncedItemsCount += 1;
+  workspace.syncedItemsCount = (workspace.syncedItemsCount || 0) + 1;
   saveNotionWorkspace(workspace);
 
   return { success: true, notionUrl: fakeUrl, syncedAt: workspace.lastSyncTimestamp };

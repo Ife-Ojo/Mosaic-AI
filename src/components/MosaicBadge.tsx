@@ -2,7 +2,7 @@ import React from 'react';
 
 interface MosaicBadgeProps {
   children: React.ReactNode;
-  variant?: 'purple' | 'blue' | 'emerald' | 'amber' | 'rose' | 'slate' | 'notion';
+  variant?: 'orange' | 'purple' | 'blue' | 'emerald' | 'amber' | 'rose' | 'slate' | 'notion';
   size?: 'sm' | 'md';
   icon?: React.ReactNode;
   className?: string;
@@ -10,19 +10,20 @@ interface MosaicBadgeProps {
 
 export function MosaicBadge({
   children,
-  variant = 'purple',
+  variant = 'orange',
   size = 'md',
   icon,
   className = '',
 }: MosaicBadgeProps) {
   const variantStyles = {
-    purple: 'bg-purple-950/60 text-purple-300 border-purple-700/40 hover:border-purple-500/60',
-    blue: 'bg-indigo-950/60 text-indigo-300 border-indigo-700/40 hover:border-indigo-500/60',
-    emerald: 'bg-emerald-950/60 text-emerald-300 border-emerald-700/40 hover:border-emerald-500/60',
-    amber: 'bg-amber-950/60 text-amber-300 border-amber-700/40 hover:border-amber-500/60',
-    rose: 'bg-rose-950/60 text-rose-300 border-rose-700/40 hover:border-rose-500/60',
-    slate: 'bg-slate-800/80 text-slate-300 border-slate-700/60 hover:border-slate-500/60',
-    notion: 'bg-stone-900/90 text-stone-300 border-stone-700 hover:border-stone-500',
+    orange: 'bg-orange-950/60 text-orange-300 border-orange-700/50 hover:border-orange-500/70',
+    purple: 'bg-purple-950/50 text-purple-300 border-purple-800/40 hover:border-purple-600/60',
+    blue: 'bg-indigo-950/50 text-indigo-300 border-indigo-800/40 hover:border-indigo-600/60',
+    emerald: 'bg-emerald-950/50 text-emerald-300 border-emerald-800/40 hover:border-emerald-600/60',
+    amber: 'bg-amber-950/50 text-amber-300 border-amber-800/40 hover:border-amber-600/60',
+    rose: 'bg-rose-950/50 text-rose-300 border-rose-800/40 hover:border-rose-600/60',
+    slate: 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700',
+    notion: 'bg-zinc-900 text-zinc-300 border-zinc-800 hover:border-zinc-700',
   };
 
   const sizeStyles = {

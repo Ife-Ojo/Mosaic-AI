@@ -16,13 +16,13 @@ export const SUPPORTED_LANGUAGES: Language[] = [
 ];
 
 export const INITIAL_NOTION_WORKSPACE: NotionWorkspaceInfo = {
-  connected: true,
-  workspaceName: "Aiden's Academic Notion Vault",
-  workspaceIcon: "🏛️",
-  targetDatabaseName: "University Courses & Learning Materials 2026",
-  lastSyncTimestamp: "Today at 2:45 PM",
-  syncedItemsCount: 18,
-  apiKeyConfigured: false, // will reflect if user inputs key or runs simulated sync
+  connected: false,
+  workspaceName: "My Notion Workspace",
+  workspaceIcon: "📓",
+  targetDatabaseName: "Course Notes & Research",
+  lastSyncTimestamp: "Not connected",
+  syncedItemsCount: 0,
+  apiKeyConfigured: false,
 };
 
 export const SAMPLE_MATERIALS: StudyMaterial[] = [
@@ -37,7 +37,7 @@ export const SAMPLE_MATERIALS: StudyMaterial[] = [
     lastModified: "2026-10-09T09:15:00Z",
     tags: ["Distributed Systems", "Algorithms", "Consensus", "CS 402"],
     notionPageId: "notion-block-8823f9",
-    notionSyncStatus: "synced",
+    notionSyncStatus: "local_only",
     notionUrl: "https://notion.so/aidens-vault/Distributed-Systems-Raft-Consensus-8823f9",
     stats: {
       wordCount: 3420,
@@ -114,7 +114,7 @@ export const SAMPLE_MATERIALS: StudyMaterial[] = [
     lastModified: "2026-10-08T18:00:00Z",
     tags: ["Neuroscience", "Synaptic Plasticity", "Memory Consolidation", "NEUR 210"],
     notionPageId: "notion-block-9941a2",
-    notionSyncStatus: "synced",
+    notionSyncStatus: "local_only",
     notionUrl: "https://notion.so/aidens-vault/Cognitive-Neuroscience-LTP-9941a2",
     stats: {
       wordCount: 2180,
@@ -227,7 +227,7 @@ export const SAMPLE_MATERIALS: StudyMaterial[] = [
     lastModified: "2026-10-09T14:10:00Z",
     tags: ["Architecture", "Kafka", "Microservices", "Grading Rubric", "CS 350"],
     notionPageId: "notion-block-3312c1",
-    notionSyncStatus: "synced",
+    notionSyncStatus: "local_only",
     notionUrl: "https://notion.so/aidens-vault/CS350-Capstone-Microservices-3312c1",
     stats: {
       wordCount: 1890,
@@ -307,7 +307,7 @@ export const SAMPLE_MATERIALS: StudyMaterial[] = [
     lastModified: "2026-10-07T16:30:00Z",
     tags: ["Economics", "Monetary Policy", "Inflation", "ECON 102"],
     notionPageId: "notion-block-5511b8",
-    notionSyncStatus: "synced",
+    notionSyncStatus: "local_only",
     notionUrl: "https://notion.so/aidens-vault/Macroeconomics-QE-5511b8",
     stats: {
       wordCount: 1650,
