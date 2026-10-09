@@ -139,6 +139,12 @@ export default function DashboardPage() {
               <RefreshCw className={`w-3 h-3 ${isSyncingAll ? 'animate-spin' : ''}`} />
               <span>{isSyncingAll ? 'Syncing...' : 'Sync Workspace'}</span>
             </button>
+            <Link
+              href="/settings"
+              className="px-2.5 py-1 rounded-lg bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/50 text-purple-300 text-xs font-semibold flex items-center gap-1 transition-colors"
+            >
+              <span>Settings ↗</span>
+            </Link>
           </div>
         </div>
       </div>

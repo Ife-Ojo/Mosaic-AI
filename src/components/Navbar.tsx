@@ -43,6 +43,7 @@ export function Navbar({ onOpenNotionOverview }: { onOpenNotionOverview?: () => 
     { name: 'Assignment Simplifier', href: '/assignment-simplifier' },
     { name: 'Notes Exchange', href: '/notes-exchange' },
     { name: 'My Learning', href: '/my-learning' },
+    { name: 'Notion & Settings', href: '/settings' },
   ];
 
   return (

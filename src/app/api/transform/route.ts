@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SupportedLanguageCode } from '@/types';
+import { executeStudyAction, resolveLanguageName } from '@/lib/ai/engine';
 
 // Multilingual translations dictionary for common academic headings and terms
 const LANGUAGE_PROFILES: Record<SupportedLanguageCode, {
@@ -107,6 +108,26 @@ export async function POST(req: NextRequest) {
             originalText: 'Detailed walkthrough of experimental mechanics, mathematical steps, and counter-intuitive observations.',
             translatedText: `[${profile.langName}] Explicación detallada de la mecánica del experimento, pasos matemáticos y observaciones analíticas.`,
             insightNotes: 'Make sure to memorize the step-by-step formula derivation.'
+          }
+        ],
+        revisionQuestions: [
+          {
+            question: `What is the core theorem or thesis established in "${title}"?`,
+            questionTranslation: `¿Cuál es el teorema o tesis central establecida en "${title}"?`,
+            answer: `The central thesis is grounded in: ${cleanExcerpt.slice(0, 140)}...`,
+            answerTranslation: `La tesis central se fundamenta en los principios explicados en esta sesión.`
+          },
+          {
+            question: "What boundary conditions or constraints were emphasized?",
+            questionTranslation: "¿Qué condiciones de contorno o restricciones se enfatizaron?",
+            answer: "The model requires standard invariant states and documented parameter limits.",
+            answerTranslation: "El modelo requiere estados invariantes estándar y límites de parámetros documentados."
+          },
+          {
+            question: "How can this material be applied to solve problem sets or exam prompts?",
+            questionTranslation: "¿Cómo se puede aplicar este material para resolver problemas o exámenes?",
+            answer: "By isolating boundary variables and applying the multi-step derivation formula.",
+            answerTranslation: "Aislando variables de contorno y aplicando la fórmula de derivación en varios pasos."
           }
         ]
       };
@@ -243,8 +264,52 @@ export async function POST(req: NextRequest) {
               }
             ]
           }
+        ],
+        revisionQuestions: [
+          {
+            question: `How would you explain the core concept of "${title}" to a beginner?`,
+            questionTranslation: `¿Cómo explicarías el concepto central de "${title}" a un principiante?`,
+            answer: "By using the Feynman analogy to ground abstract theory into concrete everyday physical models.",
+            answerTranslation: "Utilizando la analogía de Feynman para aterrizar la teoría abstracta en modelos físicos cotidianos."
+          },
+          {
+            question: "What is the critical distinction or invariant to remember for examinations?",
+            questionTranslation: "¿Cuál es la distinción crítica o invariante que se debe recordar para los exámenes?",
+            answer: "The fundamental invariant remains constant across all boundary shifts unless external forces intervene.",
+            answerTranslation: "El invariante fundamental permanece constante en todos los cambios de contorno a menos que intervengan fuerzas externas."
+          }
         ]
       };
+    }
+
+    // Leverage shared AI engine
+    let studyResult: any = null;
+    try {
+      const actionMap: Record<string, any> = {
+        study_notes: 'study-notes',
+        simplify: 'simplify',
+        flashcards: 'questions',
+        outline: 'visual-outline',
+        lecture: 'study-notes',
+        assignment: 'summarize',
+      };
+      const requestedAction = actionMap[mode] || 'study-notes';
+      studyResult = await executeStudyAction({
+        text: inputText,
+        sourceLanguage: sourceLanguage || 'en',
+        targetLanguage: targetLanguage || 'es',
+        action: requestedAction,
+      });
+
+      if (studyResult && !studyResult.isDemo) {
+        if (mode === 'simplify') {
+          generatedContent.simplifiedExplanation = studyResult.content;
+        } else if (mode === 'study_notes') {
+          generatedContent.summary = studyResult.content;
+        }
+      }
+    } catch (e) {
+      console.warn('AI engine enrichment fallback:', e);
     }
 
     return NextResponse.json({
@@ -255,6 +320,8 @@ export async function POST(req: NextRequest) {
       targetLanguage,
       wordCount,
       content: generatedContent,
+      studyResult,
+      isDemo: studyResult?.isDemo ?? true,
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {

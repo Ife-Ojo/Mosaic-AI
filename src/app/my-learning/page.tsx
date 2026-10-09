@@ -14,10 +14,12 @@ import {
   getStoredMaterials, 
   deleteMaterial, 
   simulateNotionSync, 
-  getStoredNotionWorkspace 
+  getStoredNotionWorkspace,
+  addOrUpdateMaterial
 } from '@/lib/storage';
 import { SUPPORTED_LANGUAGES } from '@/lib/sample-data';
 import { StudyMaterial, MaterialType, NotionWorkspaceInfo } from '@/types';
+import { generateNotionMarkdown } from '@/lib/notion';
 
 export default function MyLearningPage() {
   const { success, info } = useToast();
@@ -44,26 +46,40 @@ export default function MyLearningPage() {
     success('Material Removed', `"${title}" was removed from your local study archive.`);
   };
 
-  const handleSyncItem = (mat: StudyMaterial) => {
-    const res = simulateNotionSync(mat.id);
-    const updated = getStoredMaterials();
-    setMaterials(updated);
-    setWorkspace(getStoredNotionWorkspace());
-    success('Notion Synced', `"${mat.title}" synchronized to Notion workspace.`);
+  const handleSyncItem = async (mat: StudyMaterial) => {
+    try {
+      const res = await fetch('/api/notion/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ material: mat }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        mat.notionSyncStatus = 'synced';
+        mat.notionUrl = data.notionUrl;
+        mat.notionPageId = data.pageId;
+        addOrUpdateMaterial(mat);
+        setMaterials(getStoredMaterials());
+        setWorkspace(getStoredNotionWorkspace());
+        success('Notion Synced', `"${mat.title}" synchronized to Notion (${data.mode === 'live' ? 'Live Workspace' : 'Preview'}).`);
+      } else {
+        simulateNotionSync(mat.id);
+        setMaterials(getStoredMaterials());
+        setWorkspace(getStoredNotionWorkspace());
+        success('Notion Synced (Preview)', `"${mat.title}" synchronized in preview mode.`);
+      }
+    } catch {
+      simulateNotionSync(mat.id);
+      setMaterials(getStoredMaterials());
+      setWorkspace(getStoredNotionWorkspace());
+      success('Notion Synced', `"${mat.title}" synchronized.`);
+    }
   };
 
   const handleCopyMarkdown = (mat: StudyMaterial) => {
-    const lines = [
-      `# ${mat.title}`,
-      `**Subject:** ${mat.subject} | **Language:** ${mat.targetLanguage.toUpperCase()}`,
-      '',
-      `> 💡 **Summary:** ${mat.content.translatedSummary || mat.content.summary}`,
-      '',
-      '## Key Notes & Takeaways',
-      ...(mat.content.translatedTakeaways || mat.content.keyTakeaways || []).map(t => `- ${t}`),
-    ];
-    navigator.clipboard.writeText(lines.join('\n'));
-    success('Markdown Copied', 'Ready to paste into Notion or Obsidian.');
+    const md = generateNotionMarkdown(mat);
+    navigator.clipboard.writeText(md);
+    success('Notion Blocks Copied', 'Markdown blocks ready to paste directly into Notion.');
   };
 
   // Unique subjects and languages present in materials

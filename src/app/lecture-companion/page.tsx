@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Headphones, Upload, FileText, Sparkles, Database, 
   Copy, Download, Check, RefreshCw, BookOpen, Layers, 
-  ExternalLink, ChevronRight, Volume2, Globe, Clock, ArrowRight
+  ExternalLink, ChevronRight, Volume2, Globe, Clock, ArrowRight,
+  HelpCircle, ArrowDownToLine, X
 } from 'lucide-react';
 import { LanguageSelector } from '@/components/LanguageSelector';
 import { MosaicBadge } from '@/components/MosaicBadge';
@@ -25,16 +26,52 @@ export default function LectureCompanionPage() {
   const [includeGlossary, setIncludeGlossary] = useState(true);
   const [includeTimestamps, setIncludeTimestamps] = useState(true);
 
+  // Notion Page Import Bridge State
+  const [showNotionImport, setShowNotionImport] = useState(false);
+  const [notionImportUrl, setNotionImportUrl] = useState('');
+  const [isImportingFromNotion, setIsImportingFromNotion] = useState(false);
+
   const [isLoading, setIsLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState('');
   const [generatedMaterial, setGeneratedMaterial] = useState<StudyMaterial | null>(null);
   const [isNotionModalOpen, setIsNotionModalOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<'bilingual' | 'glossary' | 'takeaways' | 'original'>('bilingual');
+  const [activeTab, setActiveTab] = useState<'bilingual' | 'glossary' | 'takeaways' | 'questions' | 'original'>('bilingual');
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
 
   useEffect(() => {
     setTargetLang(getPreferredTargetLanguage());
   }, []);
+
+  const handleImportFromNotion = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!notionImportUrl.trim()) {
+      error('Notion URL Required', 'Please enter a Notion page URL or 32-character ID.');
+      return;
+    }
+
+    setIsImportingFromNotion(true);
+    try {
+      const res = await fetch('/api/notion/import', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pageIdOrUrl: notionImportUrl.trim() }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setTranscriptText(data.text);
+        if (data.title && !title) setTitle(data.title);
+        setShowNotionImport(false);
+        success('Notion Page Imported', `Retrieved ${data.wordCount} words from "${data.title}".`);
+      } else {
+        error('Import Failed', data.error || 'Make sure the page is shared with your integration bot.');
+      }
+    } catch (err: any) {
+      error('Import Error', err.message);
+    } finally {
+      setIsImportingFromNotion(false);
+    }
+  };
 
   const handleLoadPreset = (presetIndex: number) => {
     const preset = PRESET_LECTURE_TRANSCRIPTS[presetIndex];
@@ -152,6 +189,11 @@ export default function LectureCompanionPage() {
       ...(generatedMaterial.content.bilingualSections || []).map(
         (s) => `### ${s.heading} (${s.timestamp || ''})\n**Original:** ${s.originalText}\n\n**${targetLang.toUpperCase()}:** ${s.translatedText}\n`
       ),
+      '',
+      '## 🧠 Revision Questions & Active Recall',
+      ...(generatedMaterial.content.revisionQuestions || []).map(
+        (q) => `- **Q:** ${q.question} *(${q.questionTranslation || ''})*\n  - **A:** ${q.answer} *[${targetLang.toUpperCase()}]: ${q.answerTranslation || ''}*`
+      ),
     ];
     navigator.clipboard.writeText(lines.join('\n'));
     setCopiedMarkdown(true);
@@ -218,6 +260,13 @@ export default function LectureCompanionPage() {
             >
               🏰 History
             </button>
+            <button
+              onClick={() => handleLoadPreset(3)}
+              className="px-2.5 py-1.5 bg-purple-950/40 hover:bg-purple-900/60 border border-purple-800/60 text-purple-200 hover:text-white rounded-lg text-xs font-semibold transition-colors flex items-center gap-1 shadow-sm"
+              title="Load transcript captured via Notion AI Meeting Notes"
+            >
+              <span>⚡ Notion AI Notes</span>
+            </button>
           </div>
         </div>
       </div>
@@ -264,6 +313,7 @@ export default function LectureCompanionPage() {
                 >
                   <option value="Computer Science">Computer Science</option>
                   <option value="Physics">Physics</option>
+                  <option value="Artificial Intelligence">Artificial Intelligence</option>
                   <option value="Neuroscience">Neuroscience</option>
                   <option value="Economics">Economics</option>
                   <option value="History">History</option>
@@ -288,26 +338,77 @@ export default function LectureCompanionPage() {
               />
             </div>
 
-            {/* Transcript Input Area */}
+            {/* Transcript Input Area Header with Notion Bridge */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
                 <label className="text-xs font-medium text-slate-400">
-                  Lecture Transcript Text
+                  Lecture Transcript / Meeting Notes
                 </label>
-                <label className="cursor-pointer text-[11px] font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1">
-                  <Upload className="w-3 h-3" />
-                  <span>Upload .txt / .srt</span>
-                  <input
-                    type="file"
-                    accept=".txt,.srt,.vtt,.md"
-                    onChange={handleFileUpload}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowNotionImport(!showNotionImport)}
+                    className="text-[11px] font-semibold text-purple-400 hover:text-purple-300 flex items-center gap-1 transition-colors"
+                  >
+                    <ArrowDownToLine className="w-3 h-3" />
+                    <span>Import from Notion</span>
+                  </button>
+                  <label className="cursor-pointer text-[11px] font-semibold text-slate-400 hover:text-white flex items-center gap-1">
+                    <Upload className="w-3 h-3" />
+                    <span>Upload .txt/.srt</span>
+                    <input
+                      type="file"
+                      accept=".txt,.srt,.vtt,.md"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
               </div>
+
+              {/* Collapsible Notion Import Card */}
+              {showNotionImport && (
+                <div className="mb-3 p-3 rounded-xl bg-purple-950/30 border border-purple-500/30 text-xs space-y-2 animate-in fade-in">
+                  <div className="font-semibold text-purple-200 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Database className="w-3.5 h-3.5 text-purple-400" />
+                      Import Meeting Transcript from Notion Page
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setShowNotionImport(false)}
+                      className="text-slate-400 hover:text-white"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-slate-400">
+                    Paste the URL or 32-character ID of a Notion page containing your meeting notes or recorded transcript. (Make sure the page is shared with your integration bot via &quot;Add connections&quot;).
+                  </p>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      placeholder="https://notion.so/workspace/Sprint-Notes-1234567890..."
+                      value={notionImportUrl}
+                      onChange={(e) => setNotionImportUrl(e.target.value)}
+                      className="flex-1 px-2.5 py-1.5 bg-slate-900 border border-slate-750 rounded-lg text-white font-mono text-[11px] focus:outline-none focus:border-purple-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleImportFromNotion}
+                      disabled={isImportingFromNotion}
+                      className="px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg font-bold text-[11px] shrink-0 transition-colors disabled:opacity-50 flex items-center gap-1"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isImportingFromNotion ? 'animate-spin' : ''}`} />
+                      {isImportingFromNotion ? 'Importing...' : 'Fetch'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <textarea
                 rows={9}
-                placeholder="Paste the recorded lecture transcript or professor's speech here..."
+                placeholder="Paste the recorded lecture transcript or Notion AI Meeting Notes export here..."
                 value={transcriptText}
                 onChange={(e) => setTranscriptText(e.target.value)}
                 className="w-full p-3 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
@@ -415,6 +516,7 @@ export default function LectureCompanionPage() {
                   { id: 'bilingual', label: 'Bilingual Notes', icon: BookOpen },
                   { id: 'takeaways', label: 'Key Takeaways', icon: Sparkles },
                   { id: 'glossary', label: 'Concept Glossary', icon: Layers },
+                  { id: 'questions', label: 'Revision Questions', icon: HelpCircle },
                   { id: 'original', label: 'Raw Transcript', icon: FileText },
                 ].map((tab) => {
                   const Icon = tab.icon;
@@ -564,7 +666,47 @@ export default function LectureCompanionPage() {
                 </div>
               )}
 
-              {/* Tab 4: Original Transcript */}
+              {/* Tab 4: Revision Questions */}
+              {activeTab === 'questions' && (
+                <div className="space-y-4">
+                  <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                    <h3 className="text-xs font-bold text-purple-400 uppercase tracking-wider mb-2 flex items-center gap-2">
+                      <HelpCircle className="w-4 h-4" />
+                      Active Recall &amp; Revision Questions ({targetLang.toUpperCase()})
+                    </h3>
+                    <p className="text-xs text-slate-400">
+                      Practice testing your retention with bilingual questions derived from the lecture.
+                    </p>
+
+                    <div className="space-y-3 pt-1">
+                      {(generatedMaterial.content.revisionQuestions || []).map((q, idx) => (
+                        <div key={idx} className="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-2 text-xs">
+                          <div className="font-bold text-white flex items-start gap-2">
+                            <span className="text-purple-400 font-mono">Q{idx + 1}:</span>
+                            <span>{q.question}</span>
+                          </div>
+                          {q.questionTranslation && (
+                            <div className="text-slate-400 italic text-[11px] pl-6">
+                              [{targetLang.toUpperCase()}]: {q.questionTranslation}
+                            </div>
+                          )}
+                          <div className="pl-6 pt-2 border-t border-slate-800/80 text-purple-200">
+                            <strong className="text-emerald-400 font-semibold block text-[11px] mb-0.5">EXPLANATION &amp; ANSWER:</strong>
+                            <p className="text-slate-300 leading-relaxed">{q.answer}</p>
+                            {q.answerTranslation && (
+                              <p className="text-purple-300/90 text-[11px] mt-1 italic">
+                                [{targetLang.toUpperCase()}]: {q.answerTranslation}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Tab 5: Original Transcript */}
               {activeTab === 'original' && (
                 <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs text-slate-300 whitespace-pre-wrap leading-relaxed max-h-96 overflow-y-auto">
                   {generatedMaterial.content.rawSourceText || transcriptText}
