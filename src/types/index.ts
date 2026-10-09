@@ -105,6 +105,12 @@ export interface StudyMaterial {
       commonPitfalls: string[];
       milestones: AssignmentMilestone[];
     };
+    revisionQuestions?: Array<{
+      question: string;
+      answer: string;
+      questionTranslation?: string;
+      answerTranslation?: string;
+    }>;
   };
 }
 
@@ -116,4 +122,41 @@ export interface NotionWorkspaceInfo {
   lastSyncTimestamp: string;
   syncedItemsCount: number;
   apiKeyConfigured: boolean;
+  parentType?: 'database' | 'page';
+  parentId?: string;
+  botName?: string;
 }
+
+export * from './exchange';
+
+export type StudyAction =
+  | "translate"
+  | "summarize"
+  | "study-notes"
+  | "simplify"
+  | "questions"
+  | "visual-outline";
+
+export type StudyRequest = {
+  text: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  action:
+    | "translate"
+    | "summarize"
+    | "study-notes"
+    | "simplify"
+    | "questions"
+    | "visual-outline";
+};
+
+export type StudyResult = {
+  title: string;
+  content: string;
+  targetLanguage: string;
+  isDemo?: boolean;
+  demoNotice?: string;
+  action?: StudyAction;
+  model?: string;
+  wordCount?: number;
+};

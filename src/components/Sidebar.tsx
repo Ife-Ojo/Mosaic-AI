@@ -9,9 +9,11 @@ import {
   Sparkles, 
   FileCheck2, 
   Library, 
+  BookMarked,
   Database,
   Flame,
-  ArrowUpRight
+  ArrowUpRight,
+  Settings
 } from 'lucide-react';
 import { MosaicTesseraIcon } from './MosaicPattern';
 
@@ -44,10 +46,22 @@ export function Sidebar() {
       badge: 'Rubrics',
     },
     {
+      name: 'Notes Exchange',
+      href: '/notes-exchange',
+      icon: BookMarked,
+      badge: 'Community',
+    },
+    {
       name: 'My Learning',
       href: '/my-learning',
       icon: Library,
       badge: null,
+    },
+    {
+      name: 'Notion & Settings',
+      href: '/settings',
+      icon: Settings,
+      badge: 'Bridge',
     },
   ];
 

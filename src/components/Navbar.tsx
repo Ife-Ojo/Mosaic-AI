@@ -41,7 +41,9 @@ export function Navbar({ onOpenNotionOverview }: { onOpenNotionOverview?: () => 
     { name: 'Lecture Companion', href: '/lecture-companion' },
     { name: 'AI Study Studio', href: '/study-studio' },
     { name: 'Assignment Simplifier', href: '/assignment-simplifier' },
+    { name: 'Notes Exchange', href: '/notes-exchange' },
     { name: 'My Learning', href: '/my-learning' },
+    { name: 'Notion & Settings', href: '/settings' },
   ];
 
   return (
