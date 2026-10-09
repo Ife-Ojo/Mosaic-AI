@@ -9,6 +9,7 @@ import {
   Sparkles, 
   FileCheck2, 
   Library, 
+  BookMarked,
   Database,
   Flame,
   ArrowUpRight
@@ -42,6 +43,12 @@ export function Sidebar() {
       href: '/assignment-simplifier',
       icon: FileCheck2,
       badge: 'Rubrics',
+    },
+    {
+      name: 'Notes Exchange',
+      href: '/notes-exchange',
+      icon: BookMarked,
+      badge: 'Community',
     },
     {
       name: 'My Learning',

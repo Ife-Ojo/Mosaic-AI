@@ -117,3 +117,6 @@ export interface NotionWorkspaceInfo {
   syncedItemsCount: number;
   apiKeyConfigured: boolean;
 }
+
+export * from './exchange';
+
