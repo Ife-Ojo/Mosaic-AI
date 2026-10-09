@@ -11,7 +11,8 @@ import {
   Library, 
   Database,
   Flame,
-  ArrowUpRight
+  ArrowUpRight,
+  Settings
 } from 'lucide-react';
 import { MosaicTesseraIcon } from './MosaicPattern';
 
@@ -48,6 +49,12 @@ export function Sidebar() {
       href: '/my-learning',
       icon: Library,
       badge: null,
+    },
+    {
+      name: 'Notion & Settings',
+      href: '/settings',
+      icon: Settings,
+      badge: 'Bridge',
     },
   ];
 

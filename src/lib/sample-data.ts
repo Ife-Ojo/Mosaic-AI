@@ -387,6 +387,28 @@ Before 1348, Europe was characterized by land scarcity and labor surplus. Feudal
 The sudden mortality shock inverted the factor endowments. Suddenly, arable land was plentiful and fertile, but human agricultural labor was exceptionally scarce. Crops were rotting in unharvested fields.
 
 Basic supply and demand took hold: the marginal productivity of labor skyrocketed. Surviving peasant laborers discovered that they could demand substantial cash wages and better leases. When royal authorities attempted to freeze wages via statutes like the English Ordinance of Labourers in 1349, it sparked widespread agrarian rebellion, accelerating the transition toward a commercial, wage-based market economy.`
+  },
+  {
+    title: "AI Research Team Standup (Notion AI Meeting Notes)",
+    subject: "Artificial Intelligence",
+    defaultSource: "en" as const,
+    defaultTarget: "es" as const,
+    text: `Meeting Title: Multimodal Agent Architecture & Alignment Standup
+Date: October 9, 2026 | Attendees: Dr. Elena Vance, Marcus Brody, Sarah Lin
+Captured via: Notion AI Meeting Notes & Transcription
+
+Key Discussion Points:
+- Context Window Bottlenecks in Recursive Retrieval: Marcus reported that long multi-turn agent transcripts degrade attention weights in cross-lingual tasks.
+- Speculative Decoding Benchmarks: Elena shared new inference measurements showing a 2.4x speedup using small draft models for token verification.
+- Notion Integration Synchronization: Sarah highlighted the requirement that all study artifacts, glossaries, and flashcards must be written to the team's Notion Academic Vault using official block types rather than plain text blobs.
+
+Raw Meeting Transcript:
+00:01 Elena: Alright team, let's review our progress on the cross-lingual reasoning pipeline. Marcus, what did you see in the latency metrics?
+00:15 Marcus: In our evaluation across Spanish, Mandarin, and French benchmarks, token generation latency spiked by 35% when the prompt exceeded 8,000 tokens. We need to implement hierarchical chunking and bilingual summaries before sending full lecture transcripts to downstream models.
+01:05 Sarah: Exactly. And regarding the Notion workspace export: students want their bilingual notes organized into native Notion callouts and toggle blocks. If we just dump plain text, active recall flashcards lose their interactive value.
+01:45 Elena: Agreed. Let's make sure the Notion API integration generates true toggle blocks for questions and answers, and callouts with highlight emojis for the executive summary. Sarah, can you finalize the API route and permission fallback?
+02:10 Sarah: Yes, I'm verifying the internal integration bot permissions so that if the user hasn't invited the bot to their target page, we display clear instructions on how to click 'Add connections' in Notion.
+02:40 Elena: Perfect. Next milestone is Thursday.`
   }
 ];
 

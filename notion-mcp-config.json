@@ -1,0 +1,25 @@
+{
+  "description": "Mosaic AI — Notion Model Context Protocol (MCP) Configuration Reference",
+  "mcpServers": {
+    "notion": {
+      "type": "remote",
+      "url": "https://mcp.notion.com/mcp",
+      "description": "Official hosted remote Notion MCP server provided by Notion.",
+      "auth": "oauth",
+      "notes": [
+        "Uses official OAuth flow managed by Notion.",
+        "Supported by modern MCP clients (Claude Desktop, Cursor, Claude Code, Goose).",
+        "Provides tools: notion-search, get_page, create_page, update_page, query_database.",
+        "IMPORTANT: Does NOT support microphone audio streaming, live meeting recording, or real-time calendar daemons."
+      ]
+    },
+    "notion-local-bridge": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-notion"],
+      "env": {
+        "NOTION_API_KEY": "YOUR_INTERNAL_INTEGRATION_TOKEN_HERE"
+      },
+      "description": "Optional local stdio Notion MCP server for local-only workflows."
+    }
+  }
+}

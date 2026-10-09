@@ -105,6 +105,12 @@ export interface StudyMaterial {
       commonPitfalls: string[];
       milestones: AssignmentMilestone[];
     };
+    revisionQuestions?: Array<{
+      question: string;
+      answer: string;
+      questionTranslation?: string;
+      answerTranslation?: string;
+    }>;
   };
 }
 
@@ -116,4 +122,7 @@ export interface NotionWorkspaceInfo {
   lastSyncTimestamp: string;
   syncedItemsCount: number;
   apiKeyConfigured: boolean;
+  parentType?: 'database' | 'page';
+  parentId?: string;
+  botName?: string;
 }
