@@ -126,3 +126,35 @@ export interface NotionWorkspaceInfo {
   parentId?: string;
   botName?: string;
 }
+
+export type StudyAction =
+  | "translate"
+  | "summarize"
+  | "study-notes"
+  | "simplify"
+  | "questions"
+  | "visual-outline";
+
+export type StudyRequest = {
+  text: string;
+  sourceLanguage: string;
+  targetLanguage: string;
+  action:
+    | "translate"
+    | "summarize"
+    | "study-notes"
+    | "simplify"
+    | "questions"
+    | "visual-outline";
+};
+
+export type StudyResult = {
+  title: string;
+  content: string;
+  targetLanguage: string;
+  isDemo?: boolean;
+  demoNotice?: string;
+  action?: StudyAction;
+  model?: string;
+  wordCount?: number;
+};

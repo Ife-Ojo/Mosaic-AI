@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { SupportedLanguageCode } from '@/types';
+import { executeStudyAction, resolveLanguageName } from '@/lib/ai/engine';
 
 // Multilingual translations dictionary for common academic headings and terms
 const LANGUAGE_PROFILES: Record<SupportedLanguageCode, {
@@ -281,6 +282,36 @@ export async function POST(req: NextRequest) {
       };
     }
 
+    // Leverage shared AI engine
+    let studyResult: any = null;
+    try {
+      const actionMap: Record<string, any> = {
+        study_notes: 'study-notes',
+        simplify: 'simplify',
+        flashcards: 'questions',
+        outline: 'visual-outline',
+        lecture: 'study-notes',
+        assignment: 'summarize',
+      };
+      const requestedAction = actionMap[mode] || 'study-notes';
+      studyResult = await executeStudyAction({
+        text: inputText,
+        sourceLanguage: sourceLanguage || 'en',
+        targetLanguage: targetLanguage || 'es',
+        action: requestedAction,
+      });
+
+      if (studyResult && !studyResult.isDemo) {
+        if (mode === 'simplify') {
+          generatedContent.simplifiedExplanation = studyResult.content;
+        } else if (mode === 'study_notes') {
+          generatedContent.summary = studyResult.content;
+        }
+      }
+    } catch (e) {
+      console.warn('AI engine enrichment fallback:', e);
+    }
+
     return NextResponse.json({
       success: true,
       title,
@@ -289,6 +320,8 @@ export async function POST(req: NextRequest) {
       targetLanguage,
       wordCount,
       content: generatedContent,
+      studyResult,
+      isDemo: studyResult?.isDemo ?? true,
       generatedAt: new Date().toISOString()
     });
   } catch (error: any) {
