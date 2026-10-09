@@ -17,6 +17,16 @@
 
 Mosaic integrates directly with the **Official Notion API** using the `@notionhq/client` SDK. When connected, Mosaic programmatically constructs rich, authentic Notion pages in your workspace.
 
+### 2. Lecture Companion (`/lecture-companion`)
+- **Lecture Input & Transcript Workflow:**
+  1. **Paste Transcript:** Large text area for pasting meeting notes, Notion AI lecture summaries, or transcripts from any transcription tool.
+  2. **Upload Transcript:** Secure file upload supporting `.txt`, `.srt`, `.vtt`, `.md`, and `.json` files up to 10 MB with automated validation and full text preview.
+  3. **Audio Transcription (Groq Whisper):** Optional server-side speech-to-text integration powered by Groq's official Whisper API (`whisper-large-v3-turbo`) using `GROQ_API_KEY` stored exclusively on the server.
+  4. **Live Microphone Recording:** In-browser audio recording directly into the transcription engine with visual live timer and recording controls.
+- **Review Before Processing:** Full editable transcript review pane with word count and character count prior to AI synthesis.
+- **Language Selection:** Customizable source lecture language and target study language (12 supported languages).
+- **Domain-Specific Glossaries:** Technical terms paired with native translations, formal definitions, and contextual native explanations.
+- **Export & Sync:** One-click export to Notion page blocks, clipboard markdown copy, and JSON package download.
 ### What Gets Saved to Notion:
 1. **Document Metadata:** Title, Subject, Source Language, Target Language, and Creation Date.
 2. **Bilingual Executive Summary:** A stylized Notion callout block (`💡`) providing an academic synthesis in the student's native language.

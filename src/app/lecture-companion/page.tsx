@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Headphones, Upload, FileText, Sparkles, Database, 
   Copy, Download, Check, RefreshCw, BookOpen, Layers, 
   ExternalLink, ChevronRight, Volume2, Globe, Clock, ArrowRight,
+  Mic, MicOff, AlertCircle, FileCheck, CheckCircle2, Info, X
   HelpCircle, ArrowDownToLine, X
 } from 'lucide-react';
 import { LanguageSelector } from '@/components/LanguageSelector';
@@ -26,6 +27,26 @@ export default function LectureCompanionPage() {
   const [includeGlossary, setIncludeGlossary] = useState(true);
   const [includeTimestamps, setIncludeTimestamps] = useState(true);
 
+  // Workflow input method tabs: 'paste' | 'upload' | 'audio' | 'record'
+  const [inputTab, setInputTab] = useState<'paste' | 'upload' | 'audio' | 'record'>('paste');
+
+  // File Upload State
+  const [uploadedFileName, setUploadedFileName] = useState<string | null>(null);
+  const [uploadedFileSize, setUploadedFileSize] = useState<number | null>(null);
+
+  // Audio Transcription State (Groq Speech-to-Text)
+  const [audioFile, setAudioFile] = useState<File | null>(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const [transcriptionError, setTranscriptionError] = useState<string | null>(null);
+
+  // Microphone Recording State
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+  const audioChunksRef = useRef<Blob[]>([]);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Transformation & Generation State
   // Notion Page Import Bridge State
   const [showNotionImport, setShowNotionImport] = useState(false);
   const [notionImportUrl, setNotionImportUrl] = useState('');
@@ -37,9 +58,16 @@ export default function LectureCompanionPage() {
   const [isNotionModalOpen, setIsNotionModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'bilingual' | 'glossary' | 'takeaways' | 'questions' | 'original'>('bilingual');
   const [copiedMarkdown, setCopiedMarkdown] = useState(false);
+  const [activePresetIndex, setActivePresetIndex] = useState<number | null>(null);
 
   useEffect(() => {
     setTargetLang(getPreferredTargetLanguage());
+    return () => {
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        mediaRecorderRef.current.stop();
+      }
+    };
   }, []);
 
   const handleImportFromNotion = async (e: React.FormEvent) => {
@@ -81,32 +109,210 @@ export default function LectureCompanionPage() {
     setSourceLang(preset.defaultSource);
     setTargetLang(preset.defaultTarget);
     setTranscriptText(preset.text);
-    info('Sample Lecture Loaded', preset.title);
+    setActivePresetIndex(presetIndex);
+    setUploadedFileName(null);
+    info('Sample Lecture Loaded', `${preset.title} (Pre-loaded demonstration content)`);
   };
 
+  // Text Transcript File Upload Handler
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.name.match(/\.(txt|srt|vtt|md)$/i)) {
-      error('Unsupported File', 'Please upload a .txt, .srt, .vtt, or .md transcript file.');
+    // Allowed text transcript extensions
+    const validExtensions = /\.(txt|srt|vtt|md|json)$/i;
+    if (!file.name.match(validExtensions)) {
+      error(
+        'Unsupported File Format',
+        'Please upload a .txt, .srt, .vtt, .md, or .json transcript file.'
+      );
+      return;
+    }
+
+    // Size limit: 10 MB for text files
+    const maxSizeBytes = 10 * 1024 * 1024;
+    if (file.size > maxSizeBytes) {
+      error(
+        'File Too Large',
+        `File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 10 MB limit for text transcripts.`
+      );
       return;
     }
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const text = event.target?.result as string;
-      setTranscriptText(text);
-      setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
-      success('File Uploaded', `Loaded ${file.name} (${Math.round(text.length / 5)} words)`);
+      try {
+        let text = (event.target?.result as string) || '';
+        
+        // If JSON file, attempt to extract transcript string field if present
+        if (file.name.endsWith('.json')) {
+          try {
+            const parsed = JSON.parse(text);
+            if (typeof parsed.transcript === 'string') text = parsed.transcript;
+            else if (typeof parsed.text === 'string') text = parsed.text;
+            else if (typeof parsed.content === 'string') text = parsed.content;
+          } catch {
+            // Keep raw text if not structured transcript json
+          }
+        }
+
+        setTranscriptText(text);
+        setUploadedFileName(file.name);
+        setUploadedFileSize(file.size);
+        setActivePresetIndex(null);
+        if (!title.trim()) {
+          setTitle(file.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' '));
+        }
+        success(
+          'Transcript File Loaded',
+          `Extracted ${text.split(/\s+/).filter(Boolean).length} words from ${file.name}. Review below.`
+        );
+      } catch (err: any) {
+        error('File Read Failed', err.message || 'Could not parse the selected file.');
+      }
     };
     reader.readAsText(file);
   };
 
+  // Audio File Selection Handler
+  const handleAudioFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedAudioTypes = /\.(mp3|mp4|mpeg|mpga|m4a|wav|webm|ogg|flac)$/i;
+    if (!file.name.match(allowedAudioTypes)) {
+      error('Unsupported Audio Format', 'Supported formats: .mp3, .m4a, .wav, .webm, .ogg, .flac');
+      return;
+    }
+
+    if (file.size > 25 * 1024 * 1024) {
+      error('Audio File Too Large', 'Audio file must be under 25 MB for transcription.');
+      return;
+    }
+
+    setAudioFile(file);
+    setTranscriptionError(null);
+  };
+
+  // Execute Groq Speech-to-Text via Server API
+  const handleTranscribeAudio = async (fileToTranscribe?: File | Blob) => {
+    const targetFile = fileToTranscribe || audioFile;
+    if (!targetFile) {
+      error('No Audio File', 'Please select or record an audio file first.');
+      return;
+    }
+
+    setIsTranscribing(true);
+    setTranscriptionError(null);
+
+    try {
+      const formData = new FormData();
+      if (targetFile instanceof File) {
+        formData.append('file', targetFile);
+      } else {
+        // Blob from live microphone recording
+        formData.append('file', targetFile, `recording-${Date.now()}.webm`);
+      }
+      formData.append('model', 'whisper-large-v3-turbo');
+      formData.append('language', sourceLang);
+
+      const res = await fetch('/api/transcribe', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.success) {
+        if (data.missingApiKey) {
+          setTranscriptionError(
+            'Groq Speech-to-Text requires GROQ_API_KEY in your server .env. You can still paste or upload transcripts directly without any API key.'
+          );
+        } else {
+          setTranscriptionError(data.error || 'Failed to transcribe audio.');
+        }
+        return;
+      }
+
+      setTranscriptText(data.text);
+      setUploadedFileName(targetFile instanceof File ? targetFile.name : 'Microphone Recording');
+      setActivePresetIndex(null);
+      if (!title.trim()) {
+        setTitle(
+          targetFile instanceof File
+            ? targetFile.name.replace(/\.[^/.]+$/, '').replace(/[-_]/g, ' ')
+            : `Lecture Audio (${new Date().toLocaleDateString()})`
+        );
+      }
+      success(
+        'Speech Transcribed',
+        `Successfully transcribed audio (${data.text.split(/\s+/).filter(Boolean).length} words). Review below.`
+      );
+    } catch (err: any) {
+      setTranscriptionError(err.message || 'Network error connecting to speech-to-text service.');
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Microphone Recording Handlers
+  const startRecording = async () => {
+    try {
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        error('Not Supported', 'Microphone recording is not supported in this browser.');
+        return;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      audioChunksRef.current = [];
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data && event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        stream.getTracks().forEach((track) => track.stop());
+        if (audioBlob.size > 0) {
+          await handleTranscribeAudio(audioBlob);
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordingSeconds(0);
+      recordingTimerRef.current = setInterval(() => {
+        setRecordingSeconds((prev) => prev + 1);
+      }, 1000);
+      info('Recording Started', 'Speak clearly into your microphone.');
+    } catch (err: any) {
+      error('Microphone Access Denied', 'Please allow microphone access in your browser settings.');
+    }
+  };
+
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && isRecording) {
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
+      if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+    }
+  };
+
+  const formatTimer = (totalSeconds: number) => {
+    const mins = Math.floor(totalSeconds / 60);
+    const secs = totalSeconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Shared Mosaic AI Engine Generation
   const handleGenerate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!transcriptText.trim()) {
-      error('Transcript Missing', 'Please paste a lecture transcript or load a sample preset.');
+      error('Transcript Missing', 'Please paste a transcript, upload a file, or transcribe audio first.');
       return;
     }
 
@@ -147,7 +353,7 @@ export default function LectureCompanionPage() {
         tags: [subject, 'Lecture Notes', `${sourceLang.toUpperCase()}→${targetLang.toUpperCase()}`],
         notionSyncStatus: 'local_only',
         stats: {
-          wordCount: data.wordCount || 850,
+          wordCount: data.wordCount || Math.round(transcriptText.length / 5),
           estimatedReadTimeMinutes: Math.max(3, Math.round((data.wordCount || 850) / 250)),
           masteryPercentage: 75,
         },
@@ -215,6 +421,7 @@ export default function LectureCompanionPage() {
 
   const targetLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === targetLang);
   const sourceLangObj = SUPPORTED_LANGUAGES.find((l) => l.code === sourceLang);
+  const wordCount = transcriptText ? transcriptText.split(/\s+/).filter(Boolean).length : 0;
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">
@@ -227,17 +434,42 @@ export default function LectureCompanionPage() {
               <Headphones className="w-4 h-4" />
             </span>
             <span className="text-xs font-semibold text-purple-400 uppercase tracking-wider">
-              Lecture Intelligence
+              Lecture Intelligence & Transcript Workflow
             </span>
           </div>
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
             Lecture Companion
           </h1>
-          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl">
-            Convert recorded university transcripts into dual-language structured notes, audio timestamp glossaries, and clean Notion database blocks.
+          <p className="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl leading-relaxed">
+            Ingest transcripts from Notion AI Meeting Notes, recordings, or text files and prepare bilingual structured notes, technical glossaries, and Notion blocks.
           </p>
         </div>
 
+        {/* Quick Sample Presets (Clearly Labelled) */}
+        <div className="flex flex-col items-start md:items-end gap-1">
+          <span className="text-[11px] text-slate-400 flex items-center gap-1 font-medium">
+            <span>Labelled Demonstration Samples:</span>
+          </span>
+          <div className="flex flex-wrap gap-1.5">
+            {[
+              { idx: 0, label: '⚛️ Sample: Quantum', name: 'Quantum Mechanics' },
+              { idx: 1, label: '🧠 Sample: ML', name: 'Machine Learning' },
+              { idx: 2, label: '🏰 Sample: History', name: 'European History' },
+            ].map((preset) => (
+              <button
+                key={preset.idx}
+                type="button"
+                onClick={() => handleLoadPreset(preset.idx)}
+                className={`px-2.5 py-1.5 rounded-lg text-xs font-medium transition-colors border ${
+                  activePresetIndex === preset.idx
+                    ? 'bg-purple-900/60 border-purple-500 text-purple-200'
+                    : 'bg-slate-900 hover:bg-slate-850 border-slate-750 text-slate-300 hover:text-white'
+                }`}
+                title={`Load sample: ${preset.name}`}
+              >
+                {preset.label}
+              </button>
+            ))}
         {/* Quick Sample Presets */}
         <div className="flex items-center gap-2">
           <span className="text-xs text-slate-400 hidden sm:inline">Try a sample:</span>
@@ -274,20 +506,22 @@ export default function LectureCompanionPage() {
       {/* Main Workspace Layout */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
         
-        {/* Left Column: Input Panel (5 cols) */}
+        {/* Left Column: Input Workflow Panel (5 cols) */}
         <form onSubmit={handleGenerate} className="lg:col-span-5 space-y-5">
           <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800 backdrop-blur-xl shadow-xl space-y-4">
+            
+            {/* Title & Word Count Header */}
             <h2 className="text-sm font-bold text-white flex items-center justify-between border-b border-slate-800 pb-3">
               <span className="flex items-center gap-2">
                 <FileText className="w-4 h-4 text-purple-400" />
-                Transcript & Course Input
+                Lecture Content & Transcript
               </span>
               <span className="text-[11px] text-slate-400 font-normal">
-                {transcriptText ? `${transcriptText.split(/\s+/).filter(Boolean).length} words` : 'Empty'}
+                {wordCount > 0 ? `${wordCount} words (${transcriptText.length} chars)` : 'No content'}
               </span>
             </h2>
 
-            {/* Title & Subject */}
+            {/* Lecture / Course Meta */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-xs font-medium text-slate-400 mb-1">
@@ -324,20 +558,290 @@ export default function LectureCompanionPage() {
               </div>
             </div>
 
-            {/* Language Selectors */}
+            {/* Language Selectors (Source & Target) */}
             <div className="grid grid-cols-2 gap-3 pt-1">
               <LanguageSelector
-                label="Lecture Language"
+                label="Lecture Language (Source)"
                 selectedCode={sourceLang}
                 onChange={setSourceLang}
               />
               <LanguageSelector
-                label="Your Native Language"
+                label="Study Language (Target)"
                 selectedCode={targetLang}
                 onChange={setTargetLang}
               />
             </div>
 
+            {/* Input Method Selector Tabs */}
+            <div className="pt-2">
+              <label className="block text-xs font-semibold text-slate-300 mb-2">
+                Choose Ingestion Method
+              </label>
+              <div className="grid grid-cols-4 gap-1.5 p-1 bg-slate-950/80 rounded-xl border border-slate-800 text-[11px] font-medium">
+                <button
+                  type="button"
+                  onClick={() => setInputTab('paste')}
+                  className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors ${
+                    inputTab === 'paste'
+                      ? 'bg-purple-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Copy className="w-3 h-3" />
+                  <span>Paste</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputTab('upload')}
+                  className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors ${
+                    inputTab === 'upload'
+                      ? 'bg-purple-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Upload className="w-3 h-3" />
+                  <span>Upload</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputTab('audio')}
+                  className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors ${
+                    inputTab === 'audio'
+                      ? 'bg-purple-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Volume2 className="w-3 h-3" />
+                  <span>Audio</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setInputTab('record')}
+                  className={`py-1.5 px-2 rounded-lg flex items-center justify-center gap-1 transition-colors ${
+                    inputTab === 'record'
+                      ? 'bg-purple-600 text-white shadow-sm font-semibold'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Mic className="w-3 h-3" />
+                  <span>Record</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Method 1: Paste Transcript Workflow */}
+            {inputTab === 'paste' && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-[11px] text-slate-400">
+                    Paste from Notion AI Meeting Notes, Otter, or transcription tools
+                  </span>
+                  {transcriptText && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setTranscriptText('');
+                        setActivePresetIndex(null);
+                        setUploadedFileName(null);
+                      }}
+                      className="text-[10px] text-slate-500 hover:text-rose-400 transition-colors"
+                    >
+                      Clear text
+                    </button>
+                  )}
+                </div>
+                <textarea
+                  rows={9}
+                  placeholder="Paste your lecture transcript here... (e.g. copied from Notion AI Meeting Notes, Zoom transcript, or lecture recording)"
+                  value={transcriptText}
+                  onChange={(e) => {
+                    setTranscriptText(e.target.value);
+                    setActivePresetIndex(null);
+                  }}
+                  className="w-full p-3 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
+                />
+                <p className="text-[10px] text-slate-500">
+                  💡 Tip: The paste-transcript workflow works directly without needing any audio API key or server credentials.
+                </p>
+              </div>
+            )}
+
+            {/* Method 2: Upload Transcript File Workflow */}
+            {inputTab === 'upload' && (
+              <div className="space-y-3">
+                <div className="border-2 border-dashed border-slate-750 hover:border-purple-500/60 rounded-xl p-5 text-center transition-colors bg-slate-950/40">
+                  <Upload className="w-6 h-6 text-purple-400 mx-auto mb-2" />
+                  <p className="text-xs font-semibold text-white mb-0.5">
+                    Upload Lecture Transcript File
+                  </p>
+                  <p className="text-[11px] text-slate-400 mb-3">
+                    Supports <span className="font-mono text-purple-300">.txt</span>, <span className="font-mono text-purple-300">.srt</span>, <span className="font-mono text-purple-300">.vtt</span>, <span className="font-mono text-purple-300">.md</span>, <span className="font-mono text-purple-300">.json</span> (Max 10 MB)
+                  </p>
+                  <label className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-white text-xs font-medium cursor-pointer transition-colors shadow-sm">
+                    <span>Browse File</span>
+                    <input
+                      type="file"
+                      accept=".txt,.srt,.vtt,.md,.json"
+                      onChange={handleFileUpload}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                {uploadedFileName && (
+                  <div className="p-2.5 rounded-xl bg-purple-950/30 border border-purple-800/40 flex items-center justify-between text-xs text-purple-200">
+                    <div className="flex items-center gap-2 truncate">
+                      <FileCheck className="w-4 h-4 text-purple-400 shrink-0" />
+                      <span className="truncate font-medium">{uploadedFileName}</span>
+                      {uploadedFileSize && (
+                        <span className="text-[10px] text-slate-400 shrink-0">
+                          ({(uploadedFileSize / 1024).toFixed(1)} KB)
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-emerald-400 flex items-center gap-1 font-semibold">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Extracted
+                    </span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Method 3: Optional Audio Transcription (Groq Whisper) */}
+            {inputTab === 'audio' && (
+              <div className="space-y-3">
+                <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-white flex items-center gap-1.5">
+                      <Volume2 className="w-3.5 h-3.5 text-purple-400" />
+                      Groq Speech-to-Text (Whisper API)
+                    </span>
+                    <span className="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800">
+                      Server API
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 leading-relaxed">
+                    Transcribe audio recordings using Groq's official Whisper engine (<code className="text-purple-300">whisper-large-v3-turbo</code>). API key is kept secure on the server.
+                  </p>
+
+                  <div className="pt-2">
+                    <input
+                      type="file"
+                      accept="audio/*,.mp3,.m4a,.wav,.webm,.ogg,.flac"
+                      onChange={handleAudioFileSelect}
+                      className="block w-full text-xs text-slate-400 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-semibold file:bg-purple-900/60 file:text-purple-200 hover:file:bg-purple-800 cursor-pointer"
+                    />
+                  </div>
+
+                  {audioFile && (
+                    <div className="pt-2 flex items-center justify-between text-xs text-slate-300">
+                      <span className="truncate max-w-[200px]">{audioFile.name}</span>
+                      <button
+                        type="button"
+                        disabled={isTranscribing}
+                        onClick={() => handleTranscribeAudio()}
+                        className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 disabled:opacity-50 text-white font-medium flex items-center gap-1.5 transition-colors"
+                      >
+                        {isTranscribing ? (
+                          <>
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                            <span>Transcribing...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-3 h-3" />
+                            <span>Transcribe Audio</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  )}
+
+                  {transcriptionError && (
+                    <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-900/50 text-rose-300 text-[11px] flex items-start gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                      <span>{transcriptionError}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Method 4: Optional Microphone Recording */}
+            {inputTab === 'record' && (
+              <div className="p-4 rounded-xl bg-slate-950/60 border border-slate-800 text-center space-y-3">
+                <div className="w-12 h-12 rounded-full mx-auto flex items-center justify-center bg-slate-900 border border-slate-750">
+                  {isRecording ? (
+                    <div className="w-4 h-4 rounded bg-rose-500 animate-pulse" />
+                  ) : (
+                    <Mic className="w-5 h-5 text-purple-400" />
+                  )}
+                </div>
+
+                <div>
+                  <h3 className="text-xs font-bold text-white">
+                    {isRecording ? 'Recording Lecture Audio...' : 'Record Lecture Clip'}
+                  </h3>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    {isRecording ? (
+                      <span className="font-mono text-rose-400 font-semibold">{formatTimer(recordingSeconds)}</span>
+                    ) : (
+                      'Capture professor speech or your spoken summary from your microphone.'
+                    )}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-center gap-2">
+                  {!isRecording ? (
+                    <button
+                      type="button"
+                      onClick={startRecording}
+                      disabled={isTranscribing}
+                      className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md shadow-rose-950/40 transition-colors"
+                    >
+                      <Mic className="w-3.5 h-3.5" />
+                      <span>Start Recording</span>
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={stopRecording}
+                      className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-750 border border-slate-700 text-white text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                    >
+                      <MicOff className="w-3.5 h-3.5 text-rose-400" />
+                      <span>Stop & Transcribe</span>
+                    </button>
+                  )}
+                </div>
+
+                {isTranscribing && (
+                  <div className="text-xs text-purple-300 flex items-center justify-center gap-1.5 pt-1">
+                    <RefreshCw className="w-3 h-3 animate-spin" />
+                    <span>Processing speech with Groq Whisper API...</span>
+                  </div>
+                )}
+
+                {transcriptionError && (
+                  <div className="p-2.5 rounded-lg bg-rose-950/40 border border-rose-900/50 text-rose-300 text-[11px] text-left flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-400" />
+                    <span>{transcriptionError}</span>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Transcript Preview & Review Area (Always Visible Before Processing) */}
+            <div className="space-y-1.5 pt-1">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+                  <FileText className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Transcript Review Before Processing</span>
+                </label>
+                {activePresetIndex !== null && (
+                  <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-950/60 border border-amber-800 text-amber-300">
+                    Sample Content
+                  </span>
+                )}
             {/* Transcript Input Area Header with Notion Bridge */}
             <div>
               <div className="flex items-center justify-between mb-1.5 flex-wrap gap-1">
@@ -407,12 +911,21 @@ export default function LectureCompanionPage() {
               )}
 
               <textarea
+                rows={inputTab === 'paste' ? 5 : 8}
+                placeholder="The transcript text will appear here for review before you submit it to the Mosaic AI engine..."
                 rows={9}
                 placeholder="Paste the recorded lecture transcript or Notion AI Meeting Notes export here..."
                 value={transcriptText}
-                onChange={(e) => setTranscriptText(e.target.value)}
-                className="w-full p-3 bg-slate-950/80 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono leading-relaxed"
+                onChange={(e) => {
+                  setTranscriptText(e.target.value);
+                  setActivePresetIndex(null);
+                }}
+                className="w-full p-3 bg-slate-950 border border-slate-750 rounded-xl text-xs text-slate-200 placeholder-slate-600 focus:outline-none focus:border-purple-500 font-mono leading-relaxed resize-y"
               />
+              <div className="flex items-center justify-between text-[11px] text-slate-500">
+                <span>You can edit or refine any words before sending to the engine.</span>
+                <span>{wordCount} words</span>
+              </div>
             </div>
 
             {/* Feature Options */}
@@ -451,7 +964,7 @@ export default function LectureCompanionPage() {
               ) : (
                 <>
                   <Sparkles className="w-4 h-4" />
-                  <span>Generate Multilingual Lecture Pack</span>
+                  <span>Process Transcript in Mosaic AI Engine</span>
                 </>
               )}
             </button>
@@ -723,10 +1236,11 @@ export default function LectureCompanionPage() {
                 No Lecture Processed Yet
               </h3>
               <p className="text-xs text-slate-400 max-w-sm mb-6 leading-relaxed">
-                Paste your professor's lecture transcript on the left or click one of the quick samples above to see bilingual notes in action.
+                Paste your lecture transcript on the left, upload a transcript file, or select one of the clearly labelled sample presets above.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button
+                  type="button"
                   onClick={() => handleLoadPreset(0)}
                   className="px-3 py-2 rounded-xl bg-purple-600/20 hover:bg-purple-600/30 border border-purple-500/40 text-purple-200 text-xs font-semibold flex items-center gap-2 transition-colors"
                 >
