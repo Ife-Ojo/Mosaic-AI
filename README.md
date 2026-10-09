@@ -23,8 +23,13 @@
 - **Language & Study Preferences:** Configure default target language across 12 supported languages (Spanish, Mandarin, French, Arabic, German, Hindi, Portuguese, Japanese, Korean, Italian, Russian, English) and display mode (Dual-Language, Native-First with English Gloss, Feynman Plain-Language).
 
 ### 2. Lecture Companion (`/lecture-companion`)
-- **Transcript Ingestion:** Paste speech transcripts or upload `.txt`, `.srt`, `.vtt`, or `.md` files. Includes 1-click academic presets (*Quantum Mechanics*, *Machine Learning*, *European History*).
-- **Bilingual Dual-Pane Notes:** Left pane displays the original lecture transcript with audio timestamp markers; right pane displays structured bilingual notes and executive takeaways.
+- **Lecture Input & Transcript Workflow:**
+  1. **Paste Transcript:** Large text area for pasting meeting notes, Notion AI lecture summaries, or transcripts from any transcription tool.
+  2. **Upload Transcript:** Secure file upload supporting `.txt`, `.srt`, `.vtt`, `.md`, and `.json` files up to 10 MB with automated validation and full text preview.
+  3. **Audio Transcription (Groq Whisper):** Optional server-side speech-to-text integration powered by Groq's official Whisper API (`whisper-large-v3-turbo`) using `GROQ_API_KEY` stored exclusively on the server.
+  4. **Live Microphone Recording:** In-browser audio recording directly into the transcription engine with visual live timer and recording controls.
+- **Review Before Processing:** Full editable transcript review pane with word count and character count prior to AI synthesis.
+- **Language Selection:** Customizable source lecture language and target study language (12 supported languages).
 - **Domain-Specific Glossaries:** Technical terms paired with native translations, formal definitions, and contextual native explanations.
 - **Export & Sync:** One-click export to Notion page blocks, clipboard markdown copy, and JSON package download.
 
