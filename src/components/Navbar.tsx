@@ -42,6 +42,7 @@ export function Navbar({ onOpenNotionOverview }: { onOpenNotionOverview?: () => 
     { name: 'AI Study Studio', href: '/study-studio' },
     { name: 'Assignment Simplifier', href: '/assignment-simplifier' },
     { name: 'My Learning', href: '/my-learning' },
+    { name: 'Notion & Settings', href: '/settings' },
   ];
 
   return (
